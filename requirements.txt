@@ -1,0 +1,11 @@
+mss
+numpy
+
+# opencv-python
+pyscreeze
+pillow
+opencv-python
+
+pystray
+
+pyinstaller
