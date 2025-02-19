@@ -33,12 +33,12 @@
 
 デフォルト設定は以下の通り
 ```python
-framerate=30,
-resolution_h=1080,
+framerate=8,
+resolution_h=720,
 codec=CODEC.h264,
-bitrate=4500,
 crf=30,
-preset="ultrafast",
+bitrate=2000,
+preset=5,
 ```
 
 設定変えたい人は、`screen_stream.py`を書き換えてビルドしてね
