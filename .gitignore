@@ -1,5 +1,6 @@
 /venv
 /build
 /RtmpRelayer-win32-x64
-/dist/stream_key.txt
+stream_key.txt
 # /_*
+*.lnk

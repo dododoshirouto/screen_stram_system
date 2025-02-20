@@ -4,3 +4,4 @@ pyinstaller --onefile ^
     --add-data "icons/mosaic.png;icons" ^
     --add-data "icons/black.png;icons" ^
     screen_stream.py
+pause

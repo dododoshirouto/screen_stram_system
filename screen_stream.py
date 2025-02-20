@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import threading
 import tkinter as tk
 import tkinter.simpledialog as sd
@@ -140,6 +141,9 @@ class ScreenStream:
         print(f"モードを {mode} に切り替えたよ")
 
     def _capture_loop(self):
+        frame_count = 0
+        start_time = time.time()
+
         try:
             with mss() as cap_sct:
                 monitor = cap_sct.monitors[1]
@@ -152,6 +156,16 @@ class ScreenStream:
                     elif self.mode == "black":
                         frame[:] = 0
                     self.process.stdin.write(frame.tobytes())
+
+                    # --- ここでフレーム送信のペースを調整 ---
+                    frame_count += 1
+                    # 何フレーム目かに応じて「本来の再生時間」を計算
+                    ideal_time = frame_count / self.framerate  
+                    current_time = time.time() - start_time
+                    # まだ再生時間に達してなければ、ちょっと待つ
+                    if current_time < ideal_time:
+                        time.sleep(ideal_time - current_time)
+
         except Exception as e:
             print("配信ループでエラー:", e)
         finally:
@@ -217,19 +231,29 @@ class TrayApp:
             ),
             MenuItem("終了", self.on_quit)
         )
+    
+    def set_icon(self, stream=True):
+        if stream:
+            if self.streamer.mode == "normal":
+                self.icon.icon = self.icon_on
+            elif self.streamer.mode == "mosaic":
+                self.icon.icon = self.icon_mosaic
+            elif self.streamer.mode == "black":
+                self.icon.icon = self.icon_black
+        else:
+            self.icon.icon = self.icon_off
+        self.icon.update_menu()
 
     def run(self):
         self.icon.run()
 
     def on_start(self, _):
-        self.icon.icon = self.icon_on
-        self.icon.update_menu()
         self.streamer.start_stream()
+        self.set_icon(stream=self.streamer.process is not None)
 
     def on_stop(self, _):
-        self.icon.icon = self.icon_off
-        self.icon.update_menu()
         self.streamer.stop_stream()
+        self.set_icon(stream=self.streamer.process is not None)
 
     def on_change_key(self, _):
         def ask_key():
@@ -251,21 +275,15 @@ class TrayApp:
 
     def on_mode_normal(self, _):
         self.streamer.set_mode("normal")
-        if (self.streamer.process is not None):
-            self.icon.icon = self.icon_on
-        self._update_menu()
+        self.set_icon(stream=self.streamer.process is not None)
 
     def on_mode_mosaic(self, _):
         self.streamer.set_mode("mosaic")
-        if (self.streamer.process is not None):
-            self.icon.icon = self.icon_mosaic
-        self._update_menu()
+        self.set_icon(stream=self.streamer.process is not None)
 
     def on_mode_black(self, _):
         self.streamer.set_mode("black")
-        if (self.streamer.process is not None):
-            self.icon.icon = self.icon_black
-        self._update_menu()
+        self.set_icon(stream=self.streamer.process is not None)
 
     def on_quit(self, _):
         self.streamer.stop_stream()
