@@ -4,3 +4,5 @@
 stream_key.txt
 # /_*
 *.lnk
+*.spec
+_Launch Cursor.bat
