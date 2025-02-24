@@ -5,9 +5,15 @@
 
 ## 全画面をYouTubeLiveに送信するだけのアプリ
 
-もしかしたらffmpegをインストールしないと使えないかも…
+### インストール
 
+`screen_stream.exe`をダウンロード
+[screen_stream.exe](https://github.com/dododoshirouto/screen_stram_system/releases/download/ver.1.1/screen_stream.exe)
+
+FFmpegをインストールする
 [WindowsにFFmpegをインストールする方法](https://qiita.com/Tadataka_Takahashi/items/9dcb0cf308db6f5dc31b)
+
+ダウンロードした`screen_stream.exe`を開く
 
 ### 概要
 
