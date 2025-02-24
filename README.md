@@ -1,5 +1,8 @@
 # Screen Stream System
 
+![image](https://github.com/user-attachments/assets/18e84e7e-dcb8-4856-b53d-1c9a13cf67d9)
+
+
 ## 全画面をYouTubeLiveに送信するだけのアプリ
 
 もしかしたらffmpegをインストールしないと使えないかも…
