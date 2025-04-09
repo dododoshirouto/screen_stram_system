@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import time
 import threading
@@ -10,7 +11,7 @@ from PIL import Image
 from cv2 import resize as cv2resize, INTER_AREA, INTER_NEAREST
 from numpy import array as nparray
 from mss import mss
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CREATE_NO_WINDOW
 from enum import Enum
 
 # キーをファイルに保存・読み込み
@@ -115,7 +116,15 @@ class ScreenStream:
         print("配信コマンド:", ffmpeg_cmd)
 
         self.stop_flag = False
-        self.process = Popen(ffmpeg_cmd, stdin=PIPE)
+        
+        startupinfo = None
+        if os.name == 'nt':  # only the OS is Windows
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+
+        self.process = Popen(ffmpeg_cmd, stdin=PIPE, startupinfo=startupinfo)
+        #self.process = Popen(ffmpeg_cmd, stdin=PIPE, creationflags=CREATE_NO_WINDOW) #Alternative Method
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.thread.start()
         print("配信開始したよ")
@@ -200,7 +209,7 @@ class TrayApp:
             resolution_h=720,
             codec=CODEC.h264,
             crf=30,
-            bitrate=2000,
+            bitrate=3000,
             preset=5,
         )
 
