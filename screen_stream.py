@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import time
+import json
 import threading
 import tkinter as tk
 import tkinter.simpledialog as sd
@@ -38,7 +39,7 @@ def load_youtube_token():
 def lead_stream_info():
     try:
         with open("stream_info.json", "r", encoding="utf-8") as f:
-            return f.read().strip()
+            return json.load(f)
     except:
         return {
             "title": "作業アーカイブ",
@@ -51,7 +52,7 @@ def save_stream_key(key):
 
 def save_stream_info(info):
     with open("stream_info.json", "w", encoding="utf-8") as f:
-        f.write(str(info))
+        json.dump(info, f, ensure_ascii=False, indent=2)
 
 class CODEC(Enum):
     h264 = "libx264"
@@ -264,7 +265,7 @@ class TrayApp:
             MenuItem("配信開始" if (self.streamer.process is None) else "配信停止", self.on_start if (self.streamer.process is None) else self.on_stop),
             # MenuItem("ストリームキー変更", self.on_change_key),
             MenuItem(
-                "モード",
+                "モード: " + {"normal": "普通", "mosaic": "モザイク", "black": "暗転"}[self.streamer.mode],
                 Menu(
                     MenuItem(mode_label("normal", "普通"), self.on_mode_normal),
                     MenuItem(mode_label("mosaic", "モザイク"), self.on_mode_mosaic),
