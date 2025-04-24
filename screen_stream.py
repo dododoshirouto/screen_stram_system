@@ -256,7 +256,6 @@ class TrayApp:
 
         return Menu(
             MenuItem("配信開始" if (self.streamer.process is None) else "配信停止", self.on_start if (self.streamer.process is None) else self.on_stop),
-            # MenuItem("配信停止", self.on_stop),
             MenuItem("ストリームキー変更", self.on_change_key),
             MenuItem(
                 "モード",
