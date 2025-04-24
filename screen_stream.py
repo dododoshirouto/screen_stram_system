@@ -472,8 +472,11 @@ class TrayApp:
                 self.streamer.creds.refresh(Request())
             else:
                 try:
+                    client_secret = os.path.join(sys._MEIPASS, "client_secret_458758854605-ihia8ttepcfjeab3k80lk1rc40dttso9.apps.googleusercontent.com.json") if hasattr(sys, '_MEIPASS') else "client_secret_458758854605-ihia8ttepcfjeab3k80lk1rc40dttso9.apps.googleusercontent.com.json"
+                    if os.path.exists("client_secret.json"):
+                        client_secret = "client_secret.json"
                     flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-                        os.path.join(sys._MEIPASS, "client_secret_458758854605-ihia8ttepcfjeab3k80lk1rc40dttso9.apps.googleusercontent.com.json") if hasattr(sys, '_MEIPASS') else "client_secret_458758854605-ihia8ttepcfjeab3k80lk1rc40dttso9.apps.googleusercontent.com.json",
+                        client_secret,
                         YOUTUBE_SCOPES
                     )
                     self.streamer.creds = flow.run_local_server(port=0)
