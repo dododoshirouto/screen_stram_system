@@ -37,18 +37,21 @@ def load_youtube_token():
 
 def lead_stream_info():
     try:
-        with open("stream_info.txt", "r", encoding="utf-8") as f:
+        with open("stream_info.json", "r", encoding="utf-8") as f:
             return f.read().strip()
     except:
         return {
             "title": "作業アーカイブ",
-            "description": "scree stream systemからの配信なのだ。",
             "privacyStatus": "unlisted"
         }  # デフォルト値
 
 def save_stream_key(key):
     with open("stream_key.txt", "w", encoding="utf-8") as f:
         f.write(key)
+
+def save_stream_info(info):
+    with open("stream_info.json", "w", encoding="utf-8") as f:
+        f.write(str(info))
 
 class CODEC(Enum):
     h264 = "libx264"
@@ -95,7 +98,7 @@ class ScreenStream:
 
         self.creds = load_youtube_token()
 
-        (self.title, self.description, self.privacyStatus) = lead_stream_info().values()
+        (self.title, self.privacyStatus) = lead_stream_info().values()
 
     def start_stream(self):
         if self.process is not None:
@@ -253,10 +256,13 @@ class TrayApp:
         # ラベル生成用のヘルパ
         def mode_label(mode_value, text):
             return ("● " if self.streamer.mode == mode_value else "　") + text
+        
+        def privacy_label(privacy_value, text):
+            return ("▶ " if self.streamer.privacyStatus == privacy_value else "　") + text
 
         return Menu(
             MenuItem("配信開始" if (self.streamer.process is None) else "配信停止", self.on_start if (self.streamer.process is None) else self.on_stop),
-            MenuItem("ストリームキー変更", self.on_change_key),
+            # MenuItem("ストリームキー変更", self.on_change_key),
             MenuItem(
                 "モード",
                 Menu(
@@ -266,6 +272,20 @@ class TrayApp:
                 )
             ),
             MenuItem("ログイン" if (not self.streamer.creds or not self.streamer.creds.valid) else "ログイン済み", self.login_youtube, enabled=(not self.streamer.creds or not self.streamer.creds.valid)),
+            MenuItem(
+                "配信情報",
+                Menu(
+                    MenuItem("タイトル: " + self.streamer.title, self.on_change_title),
+                    MenuItem(
+                        "モード: " + {"public": "公開", "unlisted": "限定公開", "private": "非公開"}[self.streamer.privacyStatus],
+                        Menu(
+                            MenuItem(privacy_label("public", "公開"), lambda _: self.on_privacy("public")),
+                            MenuItem(privacy_label("unlisted", "限定公開"), lambda _: self.on_privacy("unlisted")),
+                            MenuItem(privacy_label("private", "非公開"), lambda _: self.on_privacy("private")),
+                        )
+                    )
+                )
+            ),
             MenuItem("終了", self.on_quit)
         )
     
@@ -350,6 +370,35 @@ class TrayApp:
             with open("youtube_token.json", "w") as token:
                 token.write(self.streamer.creds.to_json())
         self._update_menu()
+    
+    def on_change_title(self, _):
+        def ask_title():
+            root = tk.Tk()
+            root.withdraw()
+            # 今のタイトルを初期値に設定
+            new_title = sd.askstring(
+                "タイトル変更",
+                "タイトルを入力してね",
+                initialvalue=self.streamer.title
+            )
+            if new_title:
+                self.streamer.title = new_title
+                save_stream_info({
+                    "title": self.streamer.title,
+                    "privacyStatus": self.streamer.privacyStatus
+                })
+            root.destroy()
+            self._update_menu()
+        threading.Thread(target=ask_title, daemon=True).start()
+        
+    def on_privacy(self, privacy_value:pystray._win32.Icon):
+        self.streamer.privacyStatus = privacy_value
+        save_stream_info({
+            "title": self.streamer.title,
+            "privacyStatus": self.streamer.privacyStatus
+        })
+        self._update_menu()
+
 
 def main():
     tray_app = TrayApp()
