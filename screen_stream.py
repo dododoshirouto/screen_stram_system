@@ -72,8 +72,10 @@ class ScreenStream:
         bitrate=4500,
         crf=30,
         preset="ultrafast",
-        cpu_used=8
+        cpu_used=8,
+        tray=None
     ):
+        self.tray:TrayApp = tray
         self.rtmp_url = rtmp_url
         self.stream_key = stream_key
         self.framerate = framerate
@@ -83,6 +85,8 @@ class ScreenStream:
         self.crf = crf
         self.preset = preset
         self.cpu_used = cpu_used
+
+        self.broadcast_id = None
 
         with mss() as tmp_sct:
             monitor = tmp_sct.monitors[1]
@@ -159,6 +163,8 @@ class ScreenStream:
         #self.process = Popen(ffmpeg_cmd, stdin=PIPE, creationflags=CREATE_NO_WINDOW) #Alternative Method
         self.thread = threading.Thread(target=self._capture_loop, daemon=True)
         self.thread.start()
+        self.tray._update_menu()
+        self.tray.set_icon(stream=True)
         print("配信開始したよ")
 
     def stop_stream(self):
@@ -211,6 +217,106 @@ class ScreenStream:
             print("配信ループでエラー:", e)
         finally:
             print("配信ループ終了")
+    
+
+    def create_youtube_broadcast_and_start(self):
+        if not self.creds or not self.creds.valid:
+            print("YouTubeにログインしてないっぽい")
+            return
+
+        youtube = googleapiclient.discovery.build("youtube", "v3", credentials=self.creds)
+
+        # 1. ライブ配信枠を作成
+        broadcast_request = youtube.liveBroadcasts().insert(
+            part="snippet,status,contentDetails",
+            body={
+                "snippet": {
+                    "title": self.title,
+                    "scheduledStartTime": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(time.time() + 60)),  # 1分後
+                    "description": "",
+                },
+                "status": {
+                    "privacyStatus": self.privacyStatus
+                },
+                "contentDetails": {
+                    "enableAutoStart": True,
+                    "enableAutoStop": False
+                }
+            }
+        ).execute()
+
+        self.broadcast_id = broadcast_request["id"]
+        print("Broadcast ID:", self.broadcast_id)
+
+        # 2. ストリーム作成
+        stream_request = youtube.liveStreams().insert(
+            part="snippet,cdn",
+            body={
+                "snippet": {
+                    "title": self.title
+                },
+                "cdn": {
+                    "frameRate": "30fps",
+                    "resolution": "720p",
+                    "ingestionType": "rtmp"
+                }
+            }
+        ).execute()
+
+        stream_id = stream_request["id"]
+        stream_info = stream_request["cdn"]["ingestionInfo"]
+        self.rtmp_url = stream_info["ingestionAddress"] + "/"
+        self.stream_key = stream_info["streamName"]
+        print("RTMP:", self.rtmp_url + self.stream_key)
+
+        # 3. バインド
+        youtube.liveBroadcasts().bind(
+            part="id,contentDetails",
+            id=self.broadcast_id,
+            streamId=stream_id
+        ).execute()
+
+        # 4. ffmpegで配信スタート
+        self.start_stream()
+
+        # 5. 配信枠を live 状態に移行
+        youtube.liveBroadcasts().transition(
+            broadcastStatus="live",
+            id=self.broadcast_id,
+            part="status"
+        ).execute()
+
+        print("YouTubeライブを開始したよ！")
+        self.tray._update_menu()
+
+    def stop_stream(self):
+        if self.process is None:
+            print("配信してないよ")
+            return
+        print("配信停止するね")
+        self.stop_flag = True
+        if self.process.stdin:
+            self.process.stdin.close()
+        self.process.terminate()
+        self.process.wait()
+        self.process = None
+
+        # 配信枠も終了させる
+        if hasattr(self, "broadcast_id") and self.creds:
+            try:
+                youtube = googleapiclient.discovery.build("youtube", "v3", credentials=self.creds)
+                youtube.liveBroadcasts().transition(
+                    broadcastStatus="complete",
+                    id=self.broadcast_id,
+                    part="status"
+                ).execute()
+                print("YouTube配信枠も終了したわ")
+            except Exception as e:
+                print("配信枠終了時にエラー:", e)
+
+        self.tray._update_menu()
+
+
 
 class TrayApp:
     def __init__(self):
@@ -243,6 +349,7 @@ class TrayApp:
             crf=30,
             bitrate=3000,
             preset=5,
+            tray=self
         )
 
         # アイコンは初期オフ状態で
@@ -262,7 +369,7 @@ class TrayApp:
             return ("▶ " if self.streamer.privacyStatus == privacy_value else "　") + text
 
         return Menu(
-            MenuItem("配信開始" if (self.streamer.process is None) else "配信停止", self.on_start if (self.streamer.process is None) else self.on_stop),
+            MenuItem("配信開始" if (self.streamer.process is None) else "配信停止", self.on_start if (self.streamer.process is None) else self.on_stop, enabled=not(not self.streamer.creds or not self.streamer.creds.valid)),
             # MenuItem("ストリームキー変更", self.on_change_key),
             MenuItem(
                 "モード: " + {"normal": "普通", "mosaic": "モザイク", "black": "暗転"}[self.streamer.mode],
@@ -306,7 +413,8 @@ class TrayApp:
         self.icon.run()
 
     def on_start(self, _):
-        self.streamer.start_stream()
+        # self.streamer.start_stream()
+        self.streamer.create_youtube_broadcast_and_start()
         self.set_icon(stream=self.streamer.process is not None)
         self._update_menu()
 
