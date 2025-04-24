@@ -13,6 +13,13 @@ from numpy import array as nparray
 from mss import mss
 from subprocess import Popen, PIPE, CREATE_NO_WINDOW
 from enum import Enum
+import google_auth_oauthlib.flow
+from google.auth.transport.requests import Request
+import googleapiclient.discovery
+import googleapiclient.errors
+from google.oauth2.credentials import Credentials
+
+YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.readonly", "https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube.force-ssl"]
 
 # キーをファイルに保存・読み込み
 def load_stream_key():
@@ -21,6 +28,12 @@ def load_stream_key():
             return f.read().strip()
     except:
         return "xxxx-xxxx-xxxx-xxxx"  # デフォルト値
+
+def load_youtube_token():
+    try:
+        return Credentials.from_authorized_user_file("youtube_token.json", YOUTUBE_SCOPES)
+    except Exception:
+        return None
 
 def save_stream_key(key):
     with open("stream_key.txt", "w", encoding="utf-8") as f:
@@ -68,6 +81,8 @@ class ScreenStream:
         self.process = None
         self.stop_flag = False
         self.mode = "normal"
+
+        self.creds = load_youtube_token()
 
     def start_stream(self):
         if self.process is not None:
@@ -238,6 +253,7 @@ class TrayApp:
                     MenuItem(mode_label("black", "暗転"), self.on_mode_black),
                 )
             ),
+            MenuItem("ログイン" if (not self.streamer.creds or not self.streamer.creds.valid) else "ログイン済み", self.login_youtube, enabled=(not self.streamer.creds or not self.streamer.creds.valid)),
             MenuItem("終了", self.on_quit)
         )
     
@@ -303,6 +319,20 @@ class TrayApp:
         """メニューを最新状態に更新する"""
         self.icon.menu = self.build_menu()
         self.icon.update_menu()
+
+    def login_youtube(self):
+        if not self.streamer.creds or not self.streamer.creds.valid:
+            if self.streamer.creds and self.streamer.creds.expired and self.streamer.creds.refresh_token:
+                self.streamer.creds.refresh(Request())
+            else:
+                flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
+                    "client_secret_458758854605-ihia8ttepcfjeab3k80lk1rc40dttso9.apps.googleusercontent.com.json", YOUTUBE_SCOPES  # ダウンロードしたclient_secret.jsonを指定
+                )
+                self.streamer.creds = flow.run_local_server(port=0)
+            # 取得したトークンを保存
+            with open("youtube_token.json", "w") as token:
+                token.write(self.streamer.creds.to_json())
+        self._update_menu()
 
 def main():
     tray_app = TrayApp()

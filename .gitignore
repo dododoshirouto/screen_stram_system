@@ -8,4 +8,5 @@ stream_key.txt
 *.spec
 _Launch Cursor.bat
 
-client_secret_*.json
+client_secret*.json
+youtube_token.json
