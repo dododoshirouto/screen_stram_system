@@ -35,6 +35,17 @@ def load_youtube_token():
     except Exception:
         return None
 
+def lead_stream_info():
+    try:
+        with open("stream_info.txt", "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except:
+        return {
+            "title": "作業アーカイブ",
+            "description": "scree stream systemからの配信なのだ。",
+            "privacyStatus": "unlisted"
+        }  # デフォルト値
+
 def save_stream_key(key):
     with open("stream_key.txt", "w", encoding="utf-8") as f:
         f.write(key)
@@ -83,6 +94,8 @@ class ScreenStream:
         self.mode = "normal"
 
         self.creds = load_youtube_token()
+
+        (self.title, self.description, self.privacyStatus) = lead_stream_info().values()
 
     def start_stream(self):
         if self.process is not None:
@@ -242,8 +255,8 @@ class TrayApp:
             return ("● " if self.streamer.mode == mode_value else "　") + text
 
         return Menu(
-            MenuItem("配信開始", self.on_start),
-            MenuItem("配信停止", self.on_stop),
+            MenuItem("配信開始" if (self.streamer.process is None) else "配信停止", self.on_start if (self.streamer.process is None) else self.on_stop),
+            # MenuItem("配信停止", self.on_stop),
             MenuItem("ストリームキー変更", self.on_change_key),
             MenuItem(
                 "モード",
@@ -275,10 +288,12 @@ class TrayApp:
     def on_start(self, _):
         self.streamer.start_stream()
         self.set_icon(stream=self.streamer.process is not None)
+        self._update_menu()
 
     def on_stop(self, _):
         self.streamer.stop_stream()
         self.set_icon(stream=self.streamer.process is not None)
+        self._update_menu()
 
     def on_change_key(self, _):
         def ask_key():
@@ -301,14 +316,17 @@ class TrayApp:
     def on_mode_normal(self, _):
         self.streamer.set_mode("normal")
         self.set_icon(stream=self.streamer.process is not None)
+        self._update_menu()
 
     def on_mode_mosaic(self, _):
         self.streamer.set_mode("mosaic")
         self.set_icon(stream=self.streamer.process is not None)
+        self._update_menu()
 
     def on_mode_black(self, _):
         self.streamer.set_mode("black")
         self.set_icon(stream=self.streamer.process is not None)
+        self._update_menu()
 
     def on_quit(self, _):
         self.streamer.stop_stream()
