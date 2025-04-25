@@ -23,11 +23,24 @@ FFmpegをインストールする
 2025/04/25
 YouTubeAPIでログインして枠立てをするようにしたので、より確実に配信が始まります！！！
 
+#### YouTubeログインを使う方法
+
+ぼくにアカウントのGmailを教えてくれたら認証のアクセス権あげます
+
+自分でやりたい人▼
+
+1. Google Cloud Platformプロジェクトを作成する
+2. YouTube Data API v3を有効にする
+3. OAuth 2.0 クライアントIDを作成する
+4. `client_secret_xxxxxxxx.com.json`をダウンロードする
+5. テストユーザーに自分を追加する
+6. `client_secret.json`にリネームし、`screen_stream.exe`と同じフォルダに配置する
+
 ### 使い方
 
 1. `screen_stream.exe`を実行する
 2. タスクトレイのなんか黒いテレビのアイコンを右クリック
-3. YouTubeでログイン（初回だけ）
+3. YouTubeでログイン（初回だけ）（上記を参照）
 4. 配信タイトルと公開設定を選ぶ
 5. 配信開始を押す
 6. 配信されてると思うから、YouTubeStudioで確認して！
